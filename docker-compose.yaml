@@ -1,0 +1,9 @@
+services:
+  homepage:
+    build: .
+    container_name: homepage
+    restart: always
+    volumes:
+      - ./home-page/:/home-page
+    ports:
+      - "4869:4869"
