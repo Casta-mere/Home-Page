@@ -1,7 +1,8 @@
 "use client";
 
 import { WebsiteItem } from "@/app/types/WebsiteItem";
-import { ConnectMethod, ConnectStatus, useNetworkDetection } from "@/app/hooks/useNetworkDetection";
+import { ConnectMethod, ConnectStatus } from "@/app/hooks/useNetworkDetection";
+import { localIP, tailscaleIP } from "@/app/data/websites";
 import { Card, Flex, Heading, Skeleton, Text } from "@radix-ui/themes";
 import classNames from "classnames";
 
@@ -22,12 +23,28 @@ const methodLabel = (method: ConnectMethod) => {
 
 const WebsiteItemCard = ({
   website,
-  refreshKey,
+  networkMethod,
+  serviceOnline,
+  domainPattern,
 }: {
   website: WebsiteItem;
-  refreshKey: number;
+  networkMethod: ConnectMethod;
+  serviceOnline: boolean | undefined;
+  domainPattern: string | null;
 }) => {
-  const { status, url, method } = useNetworkDetection(website, refreshKey);
+  const status: ConnectStatus =
+    serviceOnline === undefined ? "checking" : serviceOnline ? "online" : "offline";
+
+  const url = (() => {
+    if (!serviceOnline) return null;
+    switch (networkMethod) {
+      case "local":     return `http://${localIP}:${website.port}`;
+      case "tailscale": return `http://${tailscaleIP}:${website.port}`;
+      case "domain":    return domainPattern?.replace("{port}", String(website.port)) ?? null;
+      default:          return null;
+    }
+  })();
+
   const { bg, border } = STATUS_STYLE[status];
 
   return (
@@ -42,13 +59,12 @@ const WebsiteItemCard = ({
       onClick={() => url && window.open(url, "_blank")}
     >
       <Flex justify="between" align="center" height="100%">
-        <Flex direction="column" gap="1" p="2">
+        <Flex direction="column" gap="2" p="2">
           <Heading as="h3" size="4">{website.name}</Heading>
-          <Text size="1" color="gray">:{website.port}</Text>
           <Skeleton loading={status === "checking"}>
             <Text size="2">
               {status === "online"
-                ? `🟢 Online (${methodLabel(method)})`
+                ? `🟢 Online (${methodLabel(networkMethod)})`
                 : "🔴 Offline"}
             </Text>
           </Skeleton>
