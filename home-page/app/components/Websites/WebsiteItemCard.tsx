@@ -70,11 +70,13 @@ const WebsiteItemCard = ({
           </Skeleton>
         </Flex>
         {website.logo && (
-          <img
-            src={"/static/logo/" + website.logo}
-            alt={website.name}
-            className="w-12 h-12 object-contain flex-shrink-0"
-          />
+          <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-white/60 shadow-sm flex-shrink-0">
+            <img
+              src={"/static/logo/" + website.logo}
+              alt={website.name}
+              className="w-10 h-10 object-contain rounded-md"
+            />
+          </div>
         )}
       </Flex>
     </Card>
