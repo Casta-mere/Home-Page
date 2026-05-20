@@ -11,5 +11,7 @@ export const websites: WebsiteItem[] = [
   { id: 5, name: "Metube", port: 8048, logo: "metube.ico" },
   { id: 6, name: "Home-Assistant", port: 8123, logo: "home-assistant.svg" },
   { id: 7, name: "FlowLedger", port: 4545, logo: "flowledger.png" },
-  { id: 8, name: "MetaCubeXD", port: 28002, logo: "metacubexd.ico" },
+  // metacubexd lives on Docker's default bridge; the LAN-IP path is intercepted
+  // by clash-meta, so probe it container-to-container by name on the shared network.
+  { id: 8, name: "MetaCubeXD", port: 28002, logo: "metacubexd.ico", probeHost: "metacubexd", probePort: 80 },
 ];
