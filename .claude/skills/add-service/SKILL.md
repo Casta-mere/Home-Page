@@ -7,9 +7,38 @@ description: Add a new service/app card to the Home-Page homelab dashboard. Use 
 
 The dashboard renders one card per entry in a single registry array. Status
 detection and rendering are automatic — you almost never touch the API route
-or components. Most additions are two steps (registry + logo) plus a redeploy.
+or components. A normal add is: prepare the logo, register the service, then
+redeploy.
 
-## Step 1 — Register the service
+## Step 1 — Prepare and trim the logo
+
+**Always trim the icon before adding it.** Cards render every logo inside a
+fixed square tile, so a raw icon with uneven internal padding or a non-square
+aspect ratio looks smaller/misaligned next to the others. Normalize it first:
+
+- Trim the surrounding transparent/whitespace border down to the actual content.
+- Pad to a **square** canvas with the content centered, occupying ~84% of the
+  square (≈8% margin each side). This is what keeps every icon the same visual
+  size under the card's `object-contain`.
+- Keep SVGs as vectors — trim by rewriting the `viewBox` to a tight square
+  bounding box rather than rasterizing.
+
+There is **no ImageMagick / rsvg / Pillow** on the NAS or the dev Mac. The
+reliable cross-format method is a browser-canvas pipeline (the dashboard itself
+serves the logos, so Chrome can decode svg/png/ico uniformly):
+
+- **SVG:** inject the markup into the DOM, read `svg.getBBox()`, then set
+  `viewBox` to a square centered on that bbox (side = maxDim / 0.84) and
+  `width`/`height` to 128. Save the edited `.svg` (stays crisp/vector).
+- **Raster (png/ico):** draw to a canvas, scan `getImageData` alpha for the
+  content bbox, crop, then center on a square canvas with the same ~8% margin.
+  Export PNG. Convert `.ico` sources to `.png` on the way out.
+
+Put the result in `home-page/public/static/logo/`. Reference it by filename
+only in the registry. (MetaCubeXD/Overleaf/etc. were normalized this way — use
+them as size/padding references.)
+
+## Step 2 — Register the service
 
 Edit `home-page/app/data/websites.ts` and append to the `websites` array:
 
@@ -22,12 +51,7 @@ Edit `home-page/app/data/websites.ts` and append to the `websites` array:
 - `port`: the **user-facing published port** on the NAS host. The click-through
   URL is built from this (`http://<localIP>:<port>`, Tailscale, or the WAN
   domain pattern). It is also the default health-probe port.
-- `logo`: filename only; the file lives in `public/static/logo/`.
-
-## Step 2 — Add the logo
-
-Drop the image in `home-page/public/static/logo/` (svg/png/ico). The card
-references it by filename via `logo`.
+- `logo`: filename of the trimmed asset from Step 1.
 
 ## Step 3 — Decide if a probe override is needed
 
@@ -61,8 +85,9 @@ cd /volume3/Dev/Home-Page && ./deploy.zsh
 curl -s http://localhost:4869/api/services   # the new id should report online if the port is up
 ```
 
-Confirm the card shows green in the browser. The components and both hooks
-(`useNetworkType`, `useServiceStatuses`) pick up the new entry automatically.
+Confirm the card shows green in the browser **and that the icon is the same
+size as its neighbors**. The components and both hooks (`useNetworkType`,
+`useServiceStatuses`) pick up the new entry automatically.
 
 ## Notes
 
