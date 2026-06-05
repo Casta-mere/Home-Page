@@ -5,94 +5,112 @@ description: Add a new service/app card to the Home-Page homelab dashboard. Use 
 
 # Adding a service to Home-Page
 
-The dashboard renders one card per entry in a single registry array. Status
-detection and rendering are automatic — you almost never touch the API route
-or components. A normal add is: prepare the logo, register the service, then
-redeploy.
+The dashboard renders one card per entry in a single registry array
+(`home-page/app/data/websites.ts`). Status detection and rendering are
+automatic — you almost never touch the API route or components. A normal add is:
+prepare the logo, register the service, then redeploy.
+
+Services are reached **by domain** through Nginx Proxy Manager
+(`https://<subdomain>.<BASE_DOMAIN>`, BASE_DOMAIN defaults to `castamerego.com`
+via `NEXT_PUBLIC_BASE_DOMAIN`). So before a tile links correctly the service
+needs an NPM proxy host + DNS record for that subdomain — that part lives
+outside this repo (see Step 3).
 
 ## Step 1 — Prepare and trim the logo
 
 **Always trim the icon before adding it.** Cards render every logo inside a
-fixed square tile, so a raw icon with uneven internal padding or a non-square
-aspect ratio looks smaller/misaligned next to the others. Normalize it first:
+fixed square tile, so a raw icon with uneven padding or a non-square aspect
+ratio looks misaligned next to the others. Normalize first:
 
-- Trim the surrounding transparent/whitespace border down to the actual content.
-- Pad to a **square** canvas with the content centered, occupying ~84% of the
-  square (≈8% margin each side). This is what keeps every icon the same visual
-  size under the card's `object-contain`.
+- Trim the surrounding transparent/whitespace border to the actual content.
+- Pad to a **square** canvas, content centered at ~84% of the square (≈8% margin
+  each side). This keeps every icon the same visual size under `object-contain`.
 - Keep SVGs as vectors — trim by rewriting the `viewBox` to a tight square
   bounding box rather than rasterizing.
 
-There is **no ImageMagick / rsvg / Pillow** on the NAS or the dev Mac. The
-reliable cross-format method is a browser-canvas pipeline (the dashboard itself
-serves the logos, so Chrome can decode svg/png/ico uniformly):
-
-- **SVG:** inject the markup into the DOM, read `svg.getBBox()`, then set
-  `viewBox` to a square centered on that bbox (side = maxDim / 0.84) and
-  `width`/`height` to 128. Save the edited `.svg` (stays crisp/vector).
+There is **no ImageMagick / rsvg / Pillow** on the NAS or dev Mac. Use a
+browser-canvas pipeline (Chrome decodes svg/png/ico uniformly):
+- **SVG:** inject markup, read `svg.getBBox()`, set `viewBox` to a square
+  centered on that bbox (side = maxDim / 0.84), `width`/`height` to 128. Save the
+  edited `.svg`.
 - **Raster (png/ico):** draw to a canvas, scan `getImageData` alpha for the
-  content bbox, crop, then center on a square canvas with the same ~8% margin.
-  Export PNG. Convert `.ico` sources to `.png` on the way out.
+  content bbox, crop, center on a square canvas with ~8% margin, export PNG.
 
-Put the result in `home-page/public/static/logo/`. Reference it by filename
-only in the registry. (MetaCubeXD/Overleaf/etc. were normalized this way — use
-them as size/padding references.)
+Put the result in `home-page/public/static/logo/`; reference it by filename.
+(MetaCubeXD/Overleaf were normalized this way — use them as references.)
 
 ## Step 2 — Register the service
 
 Edit `home-page/app/data/websites.ts` and append to the `websites` array:
 
 ```ts
-{ id: 9, name: "My App", port: 1234, logo: "my-app.svg" },
+{ id: 15, name: "My App", port: 1234, logo: "my-app.svg", subdomain: "myapp" },
 ```
 
-- `id`: next unique integer (sequential).
-- `name`: display name on the card.
-- `port`: the **user-facing published port** on the NAS host. The click-through
-  URL is built from this (`http://<localIP>:<port>`, Tailscale, or the WAN
-  domain pattern). It is also the default health-probe port.
-- `logo`: filename of the trimmed asset from Step 1.
+`WebsiteItem` fields: `{ id, name, port, logo?, subdomain?, host?, probeHost?, probePort?, network? }`
 
-## Step 3 — Decide if a probe override is needed
+- `id`: next unique integer.
+- `name`: display name.
+- `port`: the user-facing published port on the NAS host. Also the default
+  health-probe port.
+- `logo`: filename of the trimmed asset from Step 1.
+- `subdomain`: the NPM subdomain. **Link priority** in the card is
+  `host` → `subdomain` (`https://<subdomain>.<BASE_DOMAIN>`) → `http://<localIP>:<port>`
+  fallback. Set `subdomain` for any service fronted by NPM.
+- `host`: fixed-address override (http only, e.g. the router at
+  `router.castamerego.com`). Used instead of subdomain when set.
+
+## Step 3 — Make the subdomain resolve (NPM + DNS, outside this repo)
+
+For `https://<subdomain>.<BASE_DOMAIN>` to work the service needs:
+1. A DNS A-record `<subdomain>` → the NAS IP (internal/split-horizon).
+2. An NPM proxy host `<subdomain>.<base> → <NAS-IP>:<port>` (with `--websockets`
+   if it uses live sockets, e.g. Home-Assistant, Uptime Kuma, clash dashboards).
+
+This is done with the operator's NAS tooling (the `npm-add` skill / NPM admin),
+not from this repo. If the subdomain isn't set up yet, the tile still works via
+the `http://<localIP>:<port>` fallback.
+
+## Step 4 — Decide if a probe override is needed
 
 The server health check (`app/api/services/route.tsx`) opens a TCP socket to
-`SERVER_HOST:port` (SERVER_HOST = the NAS LAN IP, set in docker-compose).
-This works for services reachable on the LAN IP — which is most of them. No
-route changes are ever needed; it reads the array automatically.
+`SERVER_HOST:port` (SERVER_HOST = NAS LAN IP, set in docker-compose). Works for
+LAN-reachable services — most of them. No route changes are ever needed; it
+reads the array automatically.
 
 **Exception:** if the service is a Docker container whose LAN-IP path is
-intercepted by clash-meta (symptom: `nc -zv <LAN_IP> <port>` succeeds from the
-host shell but the probe times out from inside the homepage container), reach
-it container-to-container instead. Add probe overrides:
+intercepted by clash-meta (symptom: connect succeeds from the host shell but the
+probe times out from inside the homepage container), reach it
+container-to-container instead:
 
 ```ts
-{ id: 9, name: "My App", port: 1234, logo: "my-app.svg",
-  probeHost: "my-app-container", probePort: 80 },
+{ id: 15, name: "My App", port: 1234, logo: "my-app.svg", subdomain: "myapp",
+  probeHost: "my-app-container", probePort: 80, network: "my-app_default" },
 ```
 
-- `probeHost`/`probePort` only affect the **server-side health probe**, not the
-  user-facing URL (which still uses `port`).
-- The container must share a Docker network with `homepage` so the name resolves
-  via Docker DNS. Attach it and persist the attachment in `deploy.zsh`:
+- `probeHost`/`probePort` affect only the **server-side probe**, not the link.
+- `network` is display-only (renders a small network badge on the card).
+- The container must share a Docker network with `homepage` so the name
+  resolves. Attach it and persist in `deploy.zsh`:
   `docker network connect home-page_default <my-app-container> 2>/dev/null || true`
 
-(This is exactly how MetaCubeXD is wired — see its entry as a reference.)
+(This is how MetaCubeXD and ch-ui are wired — see their entries.)
 
-## Step 4 — Deploy and verify
+## Step 5 — Deploy and verify
 
 ```sh
 cd /volume3/Dev/Home-Page && ./deploy.zsh
 curl -s http://localhost:4869/api/services   # the new id should report online if the port is up
 ```
 
-Confirm the card shows green in the browser **and that the icon is the same
-size as its neighbors**. The components and both hooks (`useNetworkType`,
-`useServiceStatuses`) pick up the new entry automatically.
+Confirm the card shows green in the browser, links to the right place, **and
+that the icon is the same size as its neighbors**. `useServiceStatuses` and the
+components pick up the new entry automatically.
 
 ## Notes
 
-- WAN access uses the pattern `app-{port}-<device>.<cn>.ugdocker.link`; reaching
-  a new service over WAN requires the port to be exposed in the ugdocker setup
-  (external to this repo).
-- Do not edit the API route or card components for a normal add — the registry
-  array is the single source of truth.
+- The registry array is the single source of truth — do not edit the API route
+  or card components for a normal add.
+- `localIP` is exported from `websites.ts`; `BASE_DOMAIN` comes from
+  `NEXT_PUBLIC_BASE_DOMAIN` (build-time env in docker-compose, defaults to
+  `castamerego.com`).
