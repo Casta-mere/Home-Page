@@ -20,4 +20,7 @@ export const websites: WebsiteItem[] = [
   { id: 11, name: "Uptime Kuma", port: 13001, logo: "uptime-kuma.svg" },
   // Router admin page — fixed LAN host, reachable on local net only.
   { id: 12, name: "Router", host: "192.168.50.1", port: 80, logo: "router.svg", probeHost: "192.168.50.1", probePort: 80 },
+  // Nginx Proxy Manager admin UI on host :8181 (container :81). Not clash-intercepted → default probe.
+  { id: 13, name: "Nginx Proxy Manager", port: 8181, logo: "nginx-proxy-manager.svg" },
+  { id: 14, name: "Sub2API", port: 8080, logo: "sub2api.png" },
 ];
