@@ -38,6 +38,12 @@ const WebsiteItemCard = ({
 
   const url = (() => {
     if (!serviceOnline) return null;
+    // Fixed-host entries (e.g. the router) live at a constant LAN address that
+    // only resolves on the local network, regardless of the detected method.
+    if (website.host) {
+      const suffix = website.port === 80 ? "" : `:${website.port}`;
+      return `http://${website.host}${suffix}`;
+    }
     switch (networkMethod) {
       case "local":     return `http://${localIP}:${website.port}`;
       case "tailscale": return `http://${tailscaleIP}:${website.port}`;

@@ -18,4 +18,6 @@ export const websites: WebsiteItem[] = [
   // ch-ui lives on clickhouse_default; probe container-to-container to bypass clash-meta.
   { id: 10, name: "ClickHouse", port: 5521, logo: "clickhouse.svg", probeHost: "ch-ui", probePort: 3488, network: "clickhouse_default" },
   { id: 11, name: "Uptime Kuma", port: 13001, logo: "uptime-kuma.svg" },
+  // Router admin page — fixed LAN host, reachable on local net only.
+  { id: 12, name: "Router", host: "192.168.50.1", port: 80, logo: "router.svg", probeHost: "192.168.50.1", probePort: 80 },
 ];
