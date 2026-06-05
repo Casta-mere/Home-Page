@@ -8,4 +8,6 @@ export interface WebsiteItem {
   // user-facing one (e.g. a container only reachable by name on a shared network).
   probeHost?: string;
   probePort?: number;
+  // Docker network used for container-to-container probing (display only).
+  network?: string;
 }

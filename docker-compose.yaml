@@ -9,3 +9,13 @@ services:
       - "4869:4869"
     environment:
       - SERVER_HOST=192.168.50.71
+    networks:
+      - default
+      - clash_default
+      - clickhouse_default
+
+networks:
+  clash_default:
+    external: true
+  clickhouse_default:
+    external: true

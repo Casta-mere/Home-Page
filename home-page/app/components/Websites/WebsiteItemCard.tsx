@@ -3,7 +3,8 @@
 import { WebsiteItem } from "@/app/types/WebsiteItem";
 import { ConnectMethod, ConnectStatus } from "@/app/hooks/useNetworkDetection";
 import { localIP, tailscaleIP } from "@/app/data/websites";
-import { Card, Flex, Heading, Skeleton, Text } from "@radix-ui/themes";
+import { Card, Flex, Heading, Skeleton, Text, Tooltip } from "@radix-ui/themes";
+import { TbNetwork } from "react-icons/tb";
 import classNames from "classnames";
 
 const STATUS_STYLE: Record<ConnectStatus, { bg: string; border: string }> = {
@@ -60,7 +61,19 @@ const WebsiteItemCard = ({
     >
       <Flex justify="between" align="center" height="100%">
         <Flex direction="column" gap="2" p="2">
-          <Heading as="h3" size="4">{website.name}</Heading>
+          <Flex align="center" gap="1">
+            <Heading as="h3" size="4">{website.name}</Heading>
+            {website.network && (
+              <Tooltip content={website.network}>
+                <span
+                  style={{ cursor: "help", color: "var(--gray-8)", display: "flex", alignItems: "center" }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <TbNetwork size={14} />
+                </span>
+              </Tooltip>
+            )}
+          </Flex>
           <Skeleton loading={status === "checking"}>
             <Text size="2">
               {status === "online"

@@ -11,8 +11,11 @@ export const websites: WebsiteItem[] = [
   { id: 5, name: "Metube", port: 8048, logo: "metube.png" },
   { id: 6, name: "Home-Assistant", port: 8123, logo: "home-assistant.svg" },
   { id: 7, name: "FlowLedger", port: 4545, logo: "flowledger.png" },
-  // metacubexd lives on Docker's default bridge; the LAN-IP path is intercepted
-  // by clash-meta, so probe it container-to-container by name on the shared network.
-  { id: 8, name: "MetaCubeXD", port: 28002, logo: "metacubexd.png", probeHost: "metacubexd", probePort: 80 },
+  // metacubexd lives on clash_default; the LAN-IP path is intercepted
+  // by clash-meta, so probe it container-to-container by name.
+  { id: 8, name: "MetaCubeXD", port: 28002, logo: "metacubexd.png", probeHost: "metacubexd", probePort: 80, network: "clash_default" },
   { id: 9, name: "Grafana", port: 7453, logo: "grafana.svg" },
+  // ch-ui lives on clickhouse_default; probe container-to-container to bypass clash-meta.
+  { id: 10, name: "ClickHouse", port: 5521, logo: "clickhouse.svg", probeHost: "ch-ui", probePort: 3488, network: "clickhouse_default" },
+  { id: 11, name: "Uptime Kuma", port: 13001, logo: "uptime-kuma.svg" },
 ];
