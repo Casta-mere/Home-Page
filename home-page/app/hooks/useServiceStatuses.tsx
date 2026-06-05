@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+export type ConnectStatus = "checking" | "online" | "offline";
+
 const REFRESH_INTERVAL_MS = 180_000;
 
 export const useServiceStatuses = (refreshKey: number = 0): Map<number, boolean> => {

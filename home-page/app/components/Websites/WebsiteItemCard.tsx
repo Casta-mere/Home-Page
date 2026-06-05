@@ -1,11 +1,13 @@
 "use client";
 
 import { WebsiteItem } from "@/app/types/WebsiteItem";
-import { ConnectMethod, ConnectStatus } from "@/app/hooks/useNetworkDetection";
-import { localIP, tailscaleIP } from "@/app/data/websites";
+import { ConnectStatus } from "@/app/hooks/useServiceStatuses";
+import { localIP } from "@/app/data/websites";
 import { Card, Flex, Heading, Skeleton, Text, Tooltip } from "@radix-ui/themes";
 import { TbNetwork } from "react-icons/tb";
 import classNames from "classnames";
+
+const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN ?? "castamerego.com";
 
 const STATUS_STYLE: Record<ConnectStatus, { bg: string; border: string }> = {
   online:   { bg: "var(--green-3)",  border: "var(--green-6)" },
@@ -13,43 +15,27 @@ const STATUS_STYLE: Record<ConnectStatus, { bg: string; border: string }> = {
   checking: { bg: "var(--yellow-3)", border: "var(--yellow-6)" },
 };
 
-const methodLabel = (method: ConnectMethod) => {
-  switch (method) {
-    case "local":     return "local net";
-    case "tailscale": return "Tailscale";
-    case "domain":    return "wan net";
-    default:          return "unavailable";
-  }
-};
-
 const WebsiteItemCard = ({
   website,
-  networkMethod,
   serviceOnline,
-  domainPattern,
 }: {
   website: WebsiteItem;
-  networkMethod: ConnectMethod;
   serviceOnline: boolean | undefined;
-  domainPattern: string | null;
 }) => {
   const status: ConnectStatus =
     serviceOnline === undefined ? "checking" : serviceOnline ? "online" : "offline";
 
   const url = (() => {
     if (!serviceOnline) return null;
-    // Fixed-host entries (e.g. the router) live at a constant LAN address that
-    // only resolves on the local network, regardless of the detected method.
+    // Fixed-host entries (e.g. the router) link to a constant address over http.
     if (website.host) {
       const suffix = website.port === 80 ? "" : `:${website.port}`;
       return `http://${website.host}${suffix}`;
     }
-    switch (networkMethod) {
-      case "local":     return `http://${localIP}:${website.port}`;
-      case "tailscale": return `http://${tailscaleIP}:${website.port}`;
-      case "domain":    return domainPattern?.replace("{port}", String(website.port)) ?? null;
-      default:          return null;
-    }
+    // Services behind Nginx Proxy Manager are reached by their domain.
+    if (website.subdomain) return `https://${website.subdomain}.${BASE_DOMAIN}`;
+    // Fallback for tiles not yet proxied: direct LAN address.
+    return `http://${localIP}:${website.port}`;
   })();
 
   const { bg, border } = STATUS_STYLE[status];
@@ -82,9 +68,7 @@ const WebsiteItemCard = ({
           </Flex>
           <Skeleton loading={status === "checking"}>
             <Text size="2">
-              {status === "online"
-                ? `🟢 Online (${methodLabel(networkMethod)})`
-                : "🔴 Offline"}
+              {status === "online" ? "🟢 Online" : "🔴 Offline"}
             </Text>
           </Skeleton>
         </Flex>

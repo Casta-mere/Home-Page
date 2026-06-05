@@ -3,8 +3,10 @@ export interface WebsiteItem {
   name: string;
   port: number;
   logo?: string;
-  // Link host override. Defaults to localIP/tailscaleIP/domain. Set for devices
-  // that live at a fixed address off the NAS (e.g. the router at 192.168.50.1).
+  // Subdomain under the base domain → https://<subdomain>.<BASE_DOMAIN>. Preferred link.
+  subdomain?: string;
+  // Link host override. Defaults to localIP. Set for devices that live at a
+  // fixed address off the NAS (e.g. the router at router.castamerego.com).
   host?: string;
   // Server-side health-probe overrides. Defaults to SERVER_HOST:port.
   // Used when a service must be reached at a different host/port than the
