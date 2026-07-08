@@ -2,24 +2,18 @@
 
 import { WebsiteItemCards } from "./components";
 import { Flex, Heading, IconButton, Text } from "@radix-ui/themes";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { RxReload } from "react-icons/rx";
+import { useServiceStatuses } from "./hooks/useServiceStatuses";
 
 export default function Home() {
   const [refreshKey, setRefreshKey] = useState(0);
-  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+  const { statuses, lastChecked } = useServiceStatuses(refreshKey);
 
-  useEffect(() => {
-    setLastRefreshed(new Date());
-  }, []);
+  const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
 
-  const refresh = useCallback(() => {
-    setRefreshKey((k) => k + 1);
-    setLastRefreshed(new Date());
-  }, []);
-
-  const timeStr = lastRefreshed
-    ? lastRefreshed.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  const timeStr = lastChecked
+    ? lastChecked.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     : "--:--";
 
   return (
@@ -35,7 +29,7 @@ export default function Home() {
           </IconButton>
         </Flex>
       </Flex>
-      <WebsiteItemCards refreshKey={refreshKey} />
+      <WebsiteItemCards serviceStatuses={statuses} />
     </Flex>
   );
 }

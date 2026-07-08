@@ -15,6 +15,19 @@ const STATUS_STYLE: Record<ConnectStatus, { bg: string; border: string }> = {
   checking: { bg: "var(--yellow-3)", border: "var(--yellow-6)" },
 };
 
+// The probe can be wrong (e.g. clash-intercepted paths), so cards always link.
+const websiteUrl = (website: WebsiteItem): string => {
+  // Fixed-host entries (e.g. the router) link to a constant address over http.
+  if (website.host) {
+    const suffix = website.port === 80 ? "" : `:${website.port}`;
+    return `http://${website.host}${suffix}`;
+  }
+  // Services behind Nginx Proxy Manager are reached by their domain.
+  if (website.subdomain) return `https://${website.subdomain}.${BASE_DOMAIN}`;
+  // Fallback for tiles not yet proxied: direct LAN address.
+  return `http://${localIP}:${website.port}`;
+};
+
 const WebsiteItemCard = ({
   website,
   serviceOnline,
@@ -25,64 +38,56 @@ const WebsiteItemCard = ({
   const status: ConnectStatus =
     serviceOnline === undefined ? "checking" : serviceOnline ? "online" : "offline";
 
-  const url = (() => {
-    if (!serviceOnline) return null;
-    // Fixed-host entries (e.g. the router) link to a constant address over http.
-    if (website.host) {
-      const suffix = website.port === 80 ? "" : `:${website.port}`;
-      return `http://${website.host}${suffix}`;
-    }
-    // Services behind Nginx Proxy Manager are reached by their domain.
-    if (website.subdomain) return `https://${website.subdomain}.${BASE_DOMAIN}`;
-    // Fallback for tiles not yet proxied: direct LAN address.
-    return `http://${localIP}:${website.port}`;
-  })();
-
   const { bg, border } = STATUS_STYLE[status];
 
+  // Plain <a> wrapper instead of Card asChild: Radix adds .rt-reset to the
+  // anchor, and that unlayered reset overrides Tailwind's layered utilities
+  // (killing the hover transform).
   return (
-    <Card
-      size="1"
-      className={classNames(
-        "cursor-pointer min-h-28 overflow-hidden rounded-xl px-4 py-3",
-        "transition-all hover:translate-y-[-5px] hover:scale-[1.01]",
-        "hover:shadow-[0_3px_10px_0_rgba(164,190,217,0.3)]"
-      )}
-      style={{ backgroundColor: bg, borderColor: border }}
-      onClick={() => url && window.open(url, "_blank")}
-    >
-      <Flex justify="between" align="center" height="100%">
-        <Flex direction="column" gap="2" p="2">
-          <Flex align="center" gap="1">
-            <Heading as="h3" size="4">{website.name}</Heading>
-            {website.network && (
-              <Tooltip content={website.network}>
-                <span
-                  style={{ cursor: "help", color: "var(--gray-8)", display: "flex", alignItems: "center" }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <TbNetwork size={14} />
-                </span>
-              </Tooltip>
-            )}
-          </Flex>
-          <Skeleton loading={status === "checking"}>
-            <Text size="2">
-              {status === "online" ? "🟢 Online" : "🔴 Offline"}
-            </Text>
-          </Skeleton>
-        </Flex>
-        {website.logo && (
-          <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-white/60 shadow-sm flex-shrink-0">
-            <img
-              src={"/static/logo/" + website.logo}
-              alt={website.name}
-              className="w-10 h-10 object-contain rounded-md"
-            />
-          </div>
+    <a href={websiteUrl(website)} target="_blank" rel="noreferrer" className="block">
+      <Card
+        size="1"
+        className={classNames(
+          "cursor-pointer min-h-28 overflow-hidden rounded-xl px-4 py-3",
+          "transition-all hover:translate-y-[-5px] hover:scale-[1.01]",
+          "hover:shadow-[0_3px_10px_0_rgba(164,190,217,0.3)]",
+          status === "offline" && "opacity-70"
         )}
-      </Flex>
-    </Card>
+        style={{ backgroundColor: bg, borderColor: border }}
+      >
+        <Flex justify="between" align="center" height="100%">
+          <Flex direction="column" gap="2" p="2">
+            <Flex align="center" gap="1">
+              <Heading as="h3" size="4">{website.name}</Heading>
+              {website.network && (
+                <Tooltip content={website.network}>
+                  <span
+                    style={{ cursor: "help", color: "var(--gray-8)", display: "flex", alignItems: "center" }}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  >
+                    <TbNetwork size={14} />
+                  </span>
+                </Tooltip>
+              )}
+            </Flex>
+            <Skeleton loading={status === "checking"}>
+              <Text size="2">
+                {status === "online" ? "🟢 Online" : "🔴 Offline"}
+              </Text>
+            </Skeleton>
+          </Flex>
+          {website.logo && (
+            <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-white/60 shadow-sm flex-shrink-0">
+              <img
+                src={"/static/logo/" + website.logo}
+                alt={website.name}
+                className="w-10 h-10 object-contain rounded-md"
+              />
+            </div>
+          )}
+        </Flex>
+      </Card>
+    </a>
   );
 };
 
