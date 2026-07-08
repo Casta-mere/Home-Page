@@ -5,7 +5,7 @@ import ThemeToggle from "./components/ThemeToggle";
 import { Flex, Heading } from "@radix-ui/themes";
 import { useState, useCallback, useEffect } from "react";
 import { RxReload } from "react-icons/rx";
-import { TbLayoutGrid, TbLayoutList } from "react-icons/tb";
+import { TbCategory, TbLayoutGrid, TbLayoutList } from "react-icons/tb";
 import { useServiceStatuses } from "./hooks/useServiceStatuses";
 
 type ViewMode = "cards" | "launcher";
@@ -13,12 +13,14 @@ type ViewMode = "cards" | "launcher";
 export default function Home() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [view, setView] = useState<ViewMode>("cards");
+  const [grouped, setGrouped] = useState(false);
   const { statuses, lastChecked } = useServiceStatuses(refreshKey);
 
-  // Restore the saved view after mount (reading localStorage during render
+  // Restore saved prefs after mount (reading localStorage during render
   // would mismatch the server-rendered markup).
   useEffect(() => {
     if (localStorage.getItem("homepage-view") === "launcher") setView("launcher");
+    if (localStorage.getItem("homepage-grouped") === "1") setGrouped(true);
   }, []);
 
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
@@ -28,6 +30,12 @@ export default function Home() {
       const next: ViewMode = v === "cards" ? "launcher" : "cards";
       localStorage.setItem("homepage-view", next);
       return next;
+    });
+
+  const toggleGrouped = () =>
+    setGrouped((g) => {
+      localStorage.setItem("homepage-grouped", g ? "0" : "1");
+      return !g;
     });
 
   const timeStr = lastChecked
@@ -59,10 +67,19 @@ export default function Home() {
           >
             {view === "cards" ? <TbLayoutGrid /> : <TbLayoutList />}
           </button>
+          <button
+            className={grouped ? "hl-btn active" : "hl-btn"}
+            onClick={toggleGrouped}
+            aria-label="Toggle grouping"
+            aria-pressed={grouped}
+            title={grouped ? "取消分组" : "按分组显示"}
+          >
+            <TbCategory />
+          </button>
           <ThemeToggle />
         </Flex>
       </Flex>
-      <WebsiteItemCards serviceStatuses={statuses} view={view} />
+      <WebsiteItemCards serviceStatuses={statuses} view={view} grouped={grouped} />
     </Flex>
   );
 }

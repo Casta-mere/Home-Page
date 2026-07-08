@@ -23,9 +23,11 @@
   --hl-green: #30a46c;
   --hl-red: #e5484d;
   --hl-yellow: #ffc53d;
+  --hl-indigo: #3e63dd;
   --hl-chip-green: #1a7f4e;
   --hl-chip-red: #c62a30;
   --hl-chip-yellow: #8f6a0a;
+  --hl-chip-indigo: #3a5bc7;
   --hl-btn-shadow: rgba(28, 32, 36, 0.35);
   --hl-wash-1: rgba(122, 193, 255, 0.22);
   --hl-wash-2: rgba(255, 177, 196, 0.2);
@@ -42,6 +44,7 @@
   --hl-chip-green: #4ade80;
   --hl-chip-red: #ff8f8c;
   --hl-chip-yellow: #ffd34e;
+  --hl-chip-indigo: #9eb1ff;
   --hl-btn-shadow: rgba(0, 0, 0, 0.55);
   --hl-wash-1: rgba(56, 90, 190, 0.26);
   --hl-wash-2: rgba(150, 60, 120, 0.2);
@@ -54,6 +57,7 @@
   --hl-sh-on: color-mix(in srgb, var(--hl-green) 32%, transparent);
   --hl-sh-off: color-mix(in srgb, var(--hl-red) 36%, transparent);
   --hl-sh-chk: color-mix(in srgb, var(--hl-yellow) 45%, transparent);
+  --hl-sh-slp: color-mix(in srgb, var(--hl-indigo) 32%, transparent);
 }
 
 .radix-themes {
@@ -99,6 +103,14 @@
   font-size: 12px;
   color: var(--hl-muted);
 }
+/* group headings, styled like terminal comments */
+.hl-group {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--hl-muted);
+  margin-bottom: 12px;
+}
 
 .hl-btn {
   width: 36px;
@@ -128,6 +140,10 @@
 .hl-btn:focus-visible {
   outline: 2px solid var(--hl-prompt);
   outline-offset: 2px;
+}
+.hl-btn.active {
+  outline: 2px solid var(--hl-prompt);
+  outline-offset: 1px;
 }
 
 /* ---- card view ---- */
@@ -160,16 +176,31 @@
 .svc-card.on  { box-shadow: 4px 4px 0 var(--hl-sh-on); }
 .svc-card.off { box-shadow: 4px 4px 0 var(--hl-sh-off); }
 .svc-card.chk { box-shadow: 4px 4px 0 var(--hl-sh-chk); }
+.svc-card.slp { box-shadow: 4px 4px 0 var(--hl-sh-slp); }
 /* hover: card lifts, box stays (offset compensates translate) */
 .svc-card:hover { transform: translate(-2px, -2px); }
 .svc-card.on:hover  { box-shadow: 6px 6px 0 var(--hl-sh-on); }
 .svc-card.off:hover { box-shadow: 6px 6px 0 var(--hl-sh-off); }
 .svc-card.chk:hover { box-shadow: 6px 6px 0 var(--hl-sh-chk); }
+.svc-card.slp:hover { box-shadow: 6px 6px 0 var(--hl-sh-slp); }
 /* press: card sinks toward the box */
 .svc-card:active { transform: translate(2px, 2px); }
 .svc-card.on:active  { box-shadow: 2px 2px 0 var(--hl-sh-on); }
 .svc-card.off:active { box-shadow: 2px 2px 0 var(--hl-sh-off); }
 .svc-card.chk:active { box-shadow: 2px 2px 0 var(--hl-sh-chk); }
+.svc-card.slp:active { box-shadow: 2px 2px 0 var(--hl-sh-slp); }
+/* game tiles without a web UI don't pretend to be buttons */
+.svc-card.no-link, .l-card.no-link { cursor: default; }
+.svc-card.no-link:hover, .svc-card.no-link:active,
+.l-card.no-link:hover, .l-card.no-link:active { transform: none; }
+.svc-card.no-link.on:hover, .svc-card.no-link.on:active { box-shadow: 4px 4px 0 var(--hl-sh-on); }
+.svc-card.no-link.off:hover, .svc-card.no-link.off:active { box-shadow: 4px 4px 0 var(--hl-sh-off); }
+.svc-card.no-link.slp:hover, .svc-card.no-link.slp:active { box-shadow: 4px 4px 0 var(--hl-sh-slp); }
+.svc-card.no-link.chk:hover, .svc-card.no-link.chk:active { box-shadow: 4px 4px 0 var(--hl-sh-chk); }
+.l-card.no-link.on:hover, .l-card.no-link.on:active { box-shadow: 3px 3px 0 var(--hl-sh-on); }
+.l-card.no-link.off:hover, .l-card.no-link.off:active { box-shadow: 3px 3px 0 var(--hl-sh-off); }
+.l-card.no-link.slp:hover, .l-card.no-link.slp:active { box-shadow: 3px 3px 0 var(--hl-sh-slp); }
+.l-card.no-link.chk:hover, .l-card.no-link.chk:active { box-shadow: 3px 3px 0 var(--hl-sh-chk); }
 .svc-card:focus-visible {
   outline: 2px solid var(--hl-prompt);
   outline-offset: 2px;
@@ -216,6 +247,11 @@
   border-color: color-mix(in srgb, var(--hl-yellow) 55%, transparent);
   color: var(--hl-chip-yellow);
 }
+.svc-chip.slp {
+  background: color-mix(in srgb, var(--hl-indigo) 12%, transparent);
+  border-color: color-mix(in srgb, var(--hl-indigo) 45%, transparent);
+  color: var(--hl-chip-indigo);
+}
 
 /* logo is the hero: bigger, softer tile, no border */
 .svc-tile {
@@ -255,14 +291,17 @@
 .l-card.on  { box-shadow: 3px 3px 0 var(--hl-sh-on); }
 .l-card.off { box-shadow: 3px 3px 0 var(--hl-sh-off); }
 .l-card.chk { box-shadow: 3px 3px 0 var(--hl-sh-chk); }
+.l-card.slp { box-shadow: 3px 3px 0 var(--hl-sh-slp); }
 .l-card:hover { transform: translate(-2px, -2px); }
 .l-card.on:hover  { box-shadow: 5px 5px 0 var(--hl-sh-on); }
 .l-card.off:hover { box-shadow: 5px 5px 0 var(--hl-sh-off); }
 .l-card.chk:hover { box-shadow: 5px 5px 0 var(--hl-sh-chk); }
+.l-card.slp:hover { box-shadow: 5px 5px 0 var(--hl-sh-slp); }
 .l-card:active { transform: translate(2px, 2px); }
 .l-card.on:active  { box-shadow: 1px 1px 0 var(--hl-sh-on); }
 .l-card.off:active { box-shadow: 1px 1px 0 var(--hl-sh-off); }
 .l-card.chk:active { box-shadow: 1px 1px 0 var(--hl-sh-chk); }
+.l-card.slp:active { box-shadow: 1px 1px 0 var(--hl-sh-slp); }
 .l-card:focus-visible {
   outline: 2px solid var(--hl-prompt);
   outline-offset: 2px;
@@ -289,6 +328,7 @@
 .l-dot.on  { background: var(--hl-green); }
 .l-dot.off { background: var(--hl-red); }
 .l-dot.chk { background: var(--hl-yellow); }
+.l-dot.slp { background: var(--hl-indigo); }
 .l-name {
   font-size: 13px;
   font-weight: 700;

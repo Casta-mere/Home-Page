@@ -1,7 +1,7 @@
 "use client";
 
 import { WebsiteItem } from "@/app/types/WebsiteItem";
-import { ConnectStatus } from "@/app/hooks/useServiceStatuses";
+import { ConnectStatus, ServiceStatus } from "@/app/hooks/useServiceStatuses";
 import { localIP } from "@/app/data/websites";
 import { Tooltip } from "@radix-ui/themes";
 import { TbNetwork } from "react-icons/tb";
@@ -12,12 +12,14 @@ const STATUS_CLASS: Record<ConnectStatus, string> = {
   online: "on",
   offline: "off",
   checking: "chk",
+  sleeping: "slp",
 };
 
 const STATUS_LABEL: Record<ConnectStatus, string> = {
   online: "Online",
   offline: "Offline",
   checking: "Checking",
+  sleeping: "Sleeping",
 };
 
 // The probe can be wrong (e.g. clash-intercepted paths), so cards always link.
@@ -56,44 +58,68 @@ const Logo = ({ website, size }: { website: WebsiteItem; size: number }) => (
 
 const WebsiteItemCard = ({
   website,
-  serviceOnline,
+  serviceStatus,
   view,
 }: {
   website: WebsiteItem;
-  serviceOnline: boolean | undefined;
+  serviceStatus: ServiceStatus | undefined;
   view: "cards" | "launcher";
 }) => {
-  const status: ConnectStatus =
-    serviceOnline === undefined ? "checking" : serviceOnline ? "online" : "offline";
+  const status: ConnectStatus = serviceStatus?.status ?? "checking";
   const st = STATUS_CLASS[status];
 
+  // Tiles without a web UI (game servers) render as plain divs.
+  const linkProps =
+    website.link === false
+      ? ({ as: "div" } as const)
+      : ({ as: "a", href: websiteUrl(website), target: "_blank", rel: "noreferrer" } as const);
+
   if (view === "launcher") {
-    return (
-      <a href={websiteUrl(website)} target="_blank" rel="noreferrer" className={`l-card ${st}`}>
+    const inner = (
+      <>
         <div className="l-tile">
           {website.logo && <Logo website={website} size={42} />}
           <span className={`l-dot ${st}`} />
         </div>
         <div className="l-name">{website.name}</div>
+      </>
+    );
+    return linkProps.as === "a" ? (
+      <a href={linkProps.href} target="_blank" rel="noreferrer" className={`l-card ${st}`}>
+        {inner}
       </a>
+    ) : (
+      <div className={`l-card ${st} no-link`} title={STATUS_LABEL[status]}>{inner}</div>
     );
   }
 
-  return (
-    <a href={websiteUrl(website)} target="_blank" rel="noreferrer" className={`svc-card ${st}`}>
+  const inner = (
+    <>
       <div className="svc-info">
         <div className="flex items-center gap-1">
           <span className="svc-name">{website.name}</span>
           {website.network && <NetworkHint network={website.network} />}
         </div>
-        <span className={`svc-chip ${st}`}>{STATUS_LABEL[status]}</span>
+        {/* game tiles aren't clickable — the shadow color already carries
+            their status, so skip the chip */}
+        {website.link !== false && (
+          <span className={`svc-chip ${st}`}>{STATUS_LABEL[status]}</span>
+        )}
       </div>
       {website.logo && (
         <div className="svc-tile">
           <Logo website={website} size={40} />
         </div>
       )}
+    </>
+  );
+
+  return linkProps.as === "a" ? (
+    <a href={linkProps.href} target="_blank" rel="noreferrer" className={`svc-card ${st}`}>
+      {inner}
     </a>
+  ) : (
+    <div className={`svc-card ${st} no-link`}>{inner}</div>
   );
 };
 

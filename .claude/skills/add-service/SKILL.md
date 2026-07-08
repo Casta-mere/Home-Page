@@ -28,37 +28,43 @@ ratio looks misaligned next to the others. Normalize first:
 - Keep SVGs as vectors — trim by rewriting the `viewBox` to a tight square
   bounding box rather than rasterizing.
 
-There is **no ImageMagick / rsvg / Pillow** on the NAS or dev Mac. Use a
-browser-canvas pipeline (Chrome decodes svg/png/ico uniformly):
+There is **no ImageMagick / rsvg** on the NAS or dev Mac, but the dev Mac has
+Python with **Pillow** (user-site installed): alpha-bbox crop + square pad, see
+`terraria.png`/`factorio.png` history. Otherwise use a browser-canvas pipeline:
 - **SVG:** inject markup, read `svg.getBBox()`, set `viewBox` to a square
-  centered on that bbox (side = maxDim / 0.84), `width`/`height` to 128. Save the
-  edited `.svg`.
+  centered on that bbox (side = maxDim / 0.84), `width`/`height` to 128.
 - **Raster (png/ico):** draw to a canvas, scan `getImageData` alpha for the
   content bbox, crop, center on a square canvas with ~8% margin, export PNG.
 
+Icon sources worth trying first: `https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/<name>.png`,
+selfhst/icons, or the service's own favicon (Pillow reads .ico).
+
 Put the result in `home-page/public/static/logo/`; reference it by filename.
-(MetaCubeXD/Overleaf were normalized this way — use them as references.)
 
 ## Step 2 — Register the service
 
 Edit `home-page/app/data/websites.ts` and append to the `websites` array:
 
 ```ts
-{ id: 15, name: "My App", port: 1234, logo: "my-app.svg", subdomain: "myapp" },
+{ id: 20, name: "My App", port: 1234, logo: "my-app.svg", subdomain: "myapp", group: "应用" },
 ```
 
-`WebsiteItem` fields: `{ id, name, port, logo?, subdomain?, host?, probeHost?, probePort?, network? }`
+`WebsiteItem` fields: `{ id, name, port, logo?, group?, subdomain?, host?, link?,
+probe?, containerName?, wakeProxy?, probeHost?, probePort?, network? }`
 
 - `id`: next unique integer.
 - `name`: display name.
 - `port`: the user-facing published port on the NAS host. Also the default
   health-probe port.
 - `logo`: filename of the trimmed asset from Step 1.
+- `group`: section heading (existing: 应用 / 监控 / 基础设施 / 游戏; order in
+  `groupOrder`). Ungrouped cards render last.
 - `subdomain`: the NPM subdomain. **Link priority** in the card is
   `host` → `subdomain` (`https://<subdomain>.<BASE_DOMAIN>`) → `http://<localIP>:<port>`
   fallback. Set `subdomain` for any service fronted by NPM.
 - `host`: fixed-address override (http only, e.g. the router at
   `router.castamerego.com`). Used instead of subdomain when set.
+- `link: false`: tile has no web UI (game servers) — renders as a plain div.
 
 ## Step 3 — Make the subdomain resolve (NPM + DNS, outside this repo)
 
@@ -71,20 +77,22 @@ This is done with the operator's NAS tooling (the `npm-add` skill / NPM admin),
 not from this repo. If the subdomain isn't set up yet, the tile still works via
 the `http://<localIP>:<port>` fallback.
 
-## Step 4 — Decide if a probe override is needed
+## Step 4 — Pick the right probe
 
-The server health check (`app/api/services/route.tsx`) opens a TCP socket to
-`SERVER_HOST:port` (SERVER_HOST = NAS LAN IP, set in docker-compose). Works for
-LAN-reachable services — most of them. No route changes are ever needed; it
-reads the array automatically.
+The health check (`app/api/services/route.ts`) supports two probe kinds and
+caches results for 20s. It returns `{ id, status: "online"|"offline"|"sleeping",
+latencyMs }` per entry.
 
-**Exception:** if the service is a Docker container whose LAN-IP path is
-intercepted by clash-meta (symptom: connect succeeds from the host shell but the
-probe times out from inside the homepage container), reach it
-container-to-container instead:
+**tcp (default):** opens a socket to `SERVER_HOST:port` (SERVER_HOST = NAS LAN
+IP, set in docker-compose); latency is the connect time. Works for
+LAN-reachable services — most of them.
+
+**Exception — clash-intercepted containers:** if connect succeeds from the host
+shell but the probe times out from inside the homepage container, reach it
+container-to-container:
 
 ```ts
-{ id: 15, name: "My App", port: 1234, logo: "my-app.svg", subdomain: "myapp",
+{ id: 20, name: "My App", port: 1234, logo: "my-app.svg", subdomain: "myapp",
   probeHost: "my-app-container", probePort: 80, network: "my-app_default" },
 ```
 
@@ -96,21 +104,38 @@ container-to-container instead:
 
 (This is how MetaCubeXD and ch-ui are wired — see their entries.)
 
+**Exception — auto-sleep game servers (Lazytainer/Timid): NEVER tcp-probe
+them.** The sleep proxy counts traffic on the game port, so a TCP probe wakes
+the server or holds it awake forever. Use the docker-state probe instead:
+
+```ts
+{ id: 21, name: "Terraria", port: 7777, logo: "terraria.png", group: "游戏",
+  link: false, probe: "docker", containerName: "tshock", wakeProxy: "tshock-lazytainer" },
+```
+
+- `containerName` running → **online**; stopped but `wakeProxy` running →
+  **sleeping** (indigo); both stopped → offline.
+- Requires the docker socket mount in docker-compose — add
+  `- /var/run/docker.sock:/var/run/docker.sock:ro` under `volumes:` (currently
+  not mounted; no registered service uses the docker probe).
+
 ## Step 5 — Deploy and verify
 
 ```sh
-cd /volume3/Dev/Home-Page && ./deploy.zsh
-curl -s http://localhost:4869/api/services   # the new id should report online if the port is up
+cd /volume3/Dev/Home-Page && ./deploy.zsh   # builds the image, then recreates (seconds of downtime)
+curl -s http://localhost:4869/api/services  # the new id should report {"status":"online",...}
 ```
 
-Confirm the card shows green in the browser, links to the right place, **and
-that the icon is the same size as its neighbors**. `useServiceStatuses` and the
-components pick up the new entry automatically.
+Confirm the card shows the right status in the browser, links to the right
+place (check both card and launcher views), **and that the icon is the same
+size as its neighbors**. For a docker-probed game server, also confirm probing
+does not wake it: `docker ps -a --filter name=<container>` should stay Exited
+after a few dashboard refreshes.
 
 ## Notes
 
 - The registry array is the single source of truth — do not edit the API route
   or card components for a normal add.
 - `localIP` is exported from `websites.ts`; `BASE_DOMAIN` comes from
-  `NEXT_PUBLIC_BASE_DOMAIN` (build-time env in docker-compose, defaults to
-  `castamerego.com`).
+  `NEXT_PUBLIC_BASE_DOMAIN` (build **arg** in docker-compose — it's inlined at
+  build time, defaults to `castamerego.com`).
