@@ -3,23 +3,25 @@
 import React from "react";
 import WebsiteItemCard from "./WebsiteItemCard";
 import { websites } from "@/app/data/websites";
-import { Grid } from "@radix-ui/themes";
 
 const WebsiteItemCards = ({
   serviceStatuses,
+  view,
 }: {
   serviceStatuses: Map<number, boolean>;
+  view: "cards" | "launcher";
 }) => {
   return (
-    <Grid columns={{ initial: "1", sm: "2", md: "3" }} gap="5">
+    <div className={view === "launcher" ? "hl-launch" : "hl-grid"}>
       {websites.map((website) => (
         <WebsiteItemCard
           key={website.id}
           website={website}
           serviceOnline={serviceStatuses.get(website.id)}
+          view={view}
         />
       ))}
-    </Grid>
+    </div>
   );
 };
 

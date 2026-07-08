@@ -3,16 +3,21 @@
 import { WebsiteItem } from "@/app/types/WebsiteItem";
 import { ConnectStatus } from "@/app/hooks/useServiceStatuses";
 import { localIP } from "@/app/data/websites";
-import { Card, Flex, Heading, Skeleton, Text, Tooltip } from "@radix-ui/themes";
+import { Tooltip } from "@radix-ui/themes";
 import { TbNetwork } from "react-icons/tb";
-import classNames from "classnames";
 
 const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN ?? "castamerego.com";
 
-const STATUS_STYLE: Record<ConnectStatus, { bg: string; border: string }> = {
-  online:   { bg: "var(--green-3)",  border: "var(--green-6)" },
-  offline:  { bg: "var(--red-3)",   border: "var(--red-6)" },
-  checking: { bg: "var(--yellow-3)", border: "var(--yellow-6)" },
+const STATUS_CLASS: Record<ConnectStatus, string> = {
+  online: "on",
+  offline: "off",
+  checking: "chk",
+};
+
+const STATUS_LABEL: Record<ConnectStatus, string> = {
+  online: "Online",
+  offline: "Offline",
+  checking: "Checking",
 };
 
 // The probe can be wrong (e.g. clash-intercepted paths), so cards always link.
@@ -28,65 +33,66 @@ const websiteUrl = (website: WebsiteItem): string => {
   return `http://${localIP}:${website.port}`;
 };
 
+const NetworkHint = ({ network }: { network: string }) => (
+  <Tooltip content={network}>
+    <span
+      style={{ cursor: "help", color: "var(--hl-muted)", display: "flex", alignItems: "center" }}
+      onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+    >
+      <TbNetwork size={14} />
+    </span>
+  </Tooltip>
+);
+
+const Logo = ({ website, size }: { website: WebsiteItem; size: number }) => (
+  // eslint-disable-next-line @next/next/no-img-element
+  <img
+    src={"/static/logo/" + website.logo}
+    alt={website.name}
+    style={{ width: size, height: size }}
+    className="object-contain rounded-md"
+  />
+);
+
 const WebsiteItemCard = ({
   website,
   serviceOnline,
+  view,
 }: {
   website: WebsiteItem;
   serviceOnline: boolean | undefined;
+  view: "cards" | "launcher";
 }) => {
   const status: ConnectStatus =
     serviceOnline === undefined ? "checking" : serviceOnline ? "online" : "offline";
+  const st = STATUS_CLASS[status];
 
-  const { bg, border } = STATUS_STYLE[status];
+  if (view === "launcher") {
+    return (
+      <a href={websiteUrl(website)} target="_blank" rel="noreferrer" className={`l-card ${st}`}>
+        <div className="l-tile">
+          {website.logo && <Logo website={website} size={42} />}
+          <span className={`l-dot ${st}`} />
+        </div>
+        <div className="l-name">{website.name}</div>
+      </a>
+    );
+  }
 
-  // Plain <a> wrapper instead of Card asChild: Radix adds .rt-reset to the
-  // anchor, and that unlayered reset overrides Tailwind's layered utilities
-  // (killing the hover transform).
   return (
-    <a href={websiteUrl(website)} target="_blank" rel="noreferrer" className="block">
-      <Card
-        size="1"
-        className={classNames(
-          "cursor-pointer min-h-28 overflow-hidden rounded-xl px-4 py-3",
-          "transition-all hover:translate-y-[-5px] hover:scale-[1.01]",
-          "hover:shadow-[0_3px_10px_0_rgba(164,190,217,0.3)]",
-          status === "offline" && "opacity-70"
-        )}
-        style={{ backgroundColor: bg, borderColor: border }}
-      >
-        <Flex justify="between" align="center" height="100%">
-          <Flex direction="column" gap="2" p="2">
-            <Flex align="center" gap="1">
-              <Heading as="h3" size="4">{website.name}</Heading>
-              {website.network && (
-                <Tooltip content={website.network}>
-                  <span
-                    style={{ cursor: "help", color: "var(--gray-8)", display: "flex", alignItems: "center" }}
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                  >
-                    <TbNetwork size={14} />
-                  </span>
-                </Tooltip>
-              )}
-            </Flex>
-            <Skeleton loading={status === "checking"}>
-              <Text size="2">
-                {status === "online" ? "🟢 Online" : "🔴 Offline"}
-              </Text>
-            </Skeleton>
-          </Flex>
-          {website.logo && (
-            <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-white/60 shadow-sm flex-shrink-0">
-              <img
-                src={"/static/logo/" + website.logo}
-                alt={website.name}
-                className="w-10 h-10 object-contain rounded-md"
-              />
-            </div>
-          )}
-        </Flex>
-      </Card>
+    <a href={websiteUrl(website)} target="_blank" rel="noreferrer" className={`svc-card ${st}`}>
+      <div className="svc-info">
+        <div className="flex items-center gap-1">
+          <span className="svc-name">{website.name}</span>
+          {website.network && <NetworkHint network={website.network} />}
+        </div>
+        <span className={`svc-chip ${st}`}>{STATUS_LABEL[status]}</span>
+      </div>
+      {website.logo && (
+        <div className="svc-tile">
+          <Logo website={website} size={40} />
+        </div>
+      )}
     </a>
   );
 };
