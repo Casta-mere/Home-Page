@@ -21,4 +21,6 @@ export const websites: WebsiteItem[] = [
   { id: 12, name: "Router", host: "router.castamerego.com", port: 80, logo: "router.svg", probeHost: "192.168.50.1", probePort: 80 },
   { id: 13, name: "Nginx Proxy Manager", port: 8181, logo: "nginx-proxy-manager.svg", subdomain: "nginx" },
   { id: 14, name: "Sub2API", port: 8080, logo: "sub2api.png", subdomain: "sub2api" },
+  { id: 15, name: "Twingate", port: 7576, logo: "twingate.svg", subdomain: "twingate" },
+  { id: 16, name: "DST Server Manager", port: 4870, logo: "dst.svg", subdomain: "dst" },
 ];
