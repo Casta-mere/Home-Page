@@ -1,10 +1,12 @@
-docker compose down
-cd home-page
-npm run build
-cd ..
+#!/bin/zsh
+set -e
+
+# Build the image first, then recreate — the site is only down for the
+# container swap (seconds), not the whole build.
+docker compose build
 docker compose up -d
 
-# metacubexd is on Docker's default bridge; attach it to homepage's network so
-# the health probe can reach it by name, bypassing the clash-meta intercept.
+# metacubexd / ch-ui live on other networks; attach them to homepage's network
+# so the health probe can reach them by name, bypassing the clash-meta intercept.
 docker network connect home-page_default metacubexd 2>/dev/null || true
 docker network connect home-page_default ch-ui 2>/dev/null || true
