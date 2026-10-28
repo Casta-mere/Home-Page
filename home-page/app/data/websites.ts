@@ -27,4 +27,9 @@ export const websites: WebsiteItem[] = [
   { id: 14, name: "Sub2API", port: 8080, logo: "sub2api.png", subdomain: "sub2api", group: "应用" },
   { id: 15, name: "Twingate", port: 7576, logo: "twingate.svg", subdomain: "twingate", group: "基础设施" },
   { id: 16, name: "DST Server Manager", port: 4870, logo: "dst.svg", subdomain: "dst", group: "游戏" },
+  { id: 17, name: "Web Terminal", port: 7681, logo: "ttyd.svg", subdomain: "term", group: "基础设施" },
+  { id: 18, name: "TokenLens", port: 4900, logo: "tokenlens.svg", subdomain: "tokenlens", group: "应用" },
+  { id: 19, name: "icloud2nas", port: 4871, logo: "icloud2nas.svg", subdomain: "icloud2nas", group: "应用" },
+  { id: 20, name: "Apprise", port: 8000, logo: "apprise.svg", subdomain: "apprise", group: "监控" },
+  { id: 21, name: "Bark Server", port: 8087, logo: "bark.png", subdomain: "bark", group: "监控" },
 ];
